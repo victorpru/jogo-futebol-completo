@@ -4,11 +4,12 @@ import type { HeaderPage } from './AppHeader'
 
 interface ItemsPageProps {
   onNavigate: (page: HeaderPage) => void
+  levelUpCount: number
+  onUpdateLevelUpCount: (value: number) => void
 }
 
 type DrawType = 'yellow' | 'blue' | 'investment' | 'prizes'
 type DrawItem = { label: string; value: number }
-const levelUpStorageKey = 'deck-fc:prizes-level-up-count'
 
 const yellowCompanies = ['Aurora Motors', 'Boreal Foods', 'Céu Azul Energia', 'Delta Mobile', 'Estrela Bank', 'Futura Labs', 'Granito Motors', 'Horizonte Saúde', 'Íris Telecom', 'Jatobá Bebidas', 'Lume Sports', 'Maré Alta', 'Nexum Tech', 'Orbe Seguros', 'Pioneira Logística', 'Quasar Finance', 'Rota 21', 'Semente Viva', 'Trópico Wear', 'União Digital', 'Vale Norte', 'W1 Construções', 'Xênia Cosméticos', 'Yara Transportes', 'Zênite Hotels']
 const blueCompanies = ['Atlas Cloud', 'Brisa Airlines', 'Conecta Pay', 'Dínamo Fitness', 'Eclipse Motors', 'Farol Mídia', 'Gênesis Foods', 'Hidro Mais', 'Impacto Solar', 'Jardim Real', 'Kairós Health', 'Lagoa Bank', 'Mosaico Design', 'Nobre Motors', 'Onda Telecom']
@@ -47,17 +48,11 @@ function prepareDrawItems(type: DrawType, levelUpCount = 0): DrawItem[] {
   return items
 }
 
-function getStoredLevelUpCount() {
-  const storedValue = Number(window.localStorage.getItem(levelUpStorageKey))
-  return Number.isInteger(storedValue) && storedValue >= 0 && storedValue <= 25 ? storedValue : 0
-}
-
-export function ItemsPage({ onNavigate }: ItemsPageProps) {
+export function ItemsPage({ onNavigate, levelUpCount, onUpdateLevelUpCount }: ItemsPageProps) {
   const [drawType, setDrawType] = useState<DrawType | null>(null)
   const [drawnItems, setDrawnItems] = useState<DrawItem[]>([])
   const [pendingItems, setPendingItems] = useState<DrawItem[]>([])
   const [currentItem, setCurrentItem] = useState<DrawItem | null>(null)
-  const [levelUpCount, setLevelUpCount] = useState(getStoredLevelUpCount)
 
   const openDraw = (type: DrawType) => {
     setDrawType(type)
@@ -67,13 +62,11 @@ export function ItemsPage({ onNavigate }: ItemsPageProps) {
   }
 
   const clearLevelUpCount = () => {
-    setLevelUpCount(0)
-    window.localStorage.removeItem(levelUpStorageKey)
+    onUpdateLevelUpCount(0)
   }
 
   const updateLevelUpCount = (value: number) => {
-    setLevelUpCount(value)
-    window.localStorage.setItem(levelUpStorageKey, String(value))
+    onUpdateLevelUpCount(value)
   }
 
   const drawItem = () => {

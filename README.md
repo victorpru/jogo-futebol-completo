@@ -25,8 +25,12 @@ chaves `service_role` ou `sb_secret_` nunca devem ser expostas.
 
 O botão **Entrar** no cabeçalho permite criar uma conta, fazer login e sair. A
 confirmação de e-mail segue a configuração de Authentication → Providers no
-projeto Supabase. Cartas, sorteio NPC e histórico permanecem nas APIs locais
-existentes; nenhuma tabela de jogabilidade foi criada nesta etapa.
+projeto Supabase. Para salvar o orçamento e o elenco por usuário, execute o
+conteúdo de [team-state.sql](./supabase/team-state.sql) no SQL Editor do
+Supabase. As políticas RLS garantem que cada conta só leia e altere o próprio
+time. O orçamento, o elenco, as posições e a configuração de LEVEL-UP ficam no
+Supabase; não há persistência desses dados no navegador. Cartas, sorteio NPC e
+histórico permanecem nas APIs locais existentes.
 
 ## Catálogo e API fake
 

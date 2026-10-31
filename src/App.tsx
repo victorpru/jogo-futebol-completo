@@ -10,25 +10,11 @@ import { WinnersPage, WinnersPasswordPage } from './components/WinnersPage'
 import { RulesPage } from './components/RulesPage'
 import type { WinnerRecord } from './components/WinnersPage'
 import { addWinnerWin, deleteWinner, fetchWinners, saveWinner } from './services/winnersApi'
+import { supabase } from './lib/supabase'
+import { fetchTeam, saveTeam } from './services/teamApi'
 import './App.css'
 
 const positionOptions: Array<PlayerPosition | 'TODAS'> = ['TODAS', 'GOL', 'ZAG', 'LAT', 'VOL', 'MEI', 'ATA']
-const moneyStorageKey = 'deck-fc:team-money'
-const ownedPlayersStorageKey = 'deck-fc:team-players'
-
-function getStoredMoney() {
-  const value = Number(window.localStorage.getItem(moneyStorageKey))
-  return Number.isFinite(value) && value >= 0 ? value : 0
-}
-
-function getStoredOwnedPlayers(): TeamPlayer[] {
-  try {
-    const value = JSON.parse(window.localStorage.getItem(ownedPlayersStorageKey) || '[]') as unknown
-    return Array.isArray(value) ? value.filter((player): player is TeamPlayer => typeof player === 'object' && player !== null && typeof player.id === 'string' && Number.isInteger(player.skill) && Number.isFinite(player.value) && ['GOL', 'ZAG', 'LAT', 'VOL', 'MEI', 'ATA'].includes(player.assignedPosition)) : []
-  } catch {
-    return []
-  }
-}
 
 function PlayerCard({ player }: { player: FootballPlayer }) {
   return <article className="card">
@@ -58,14 +44,45 @@ export default function App() {
   const [sort, setSort] = useState<'skill' | 'value'>('skill')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [money, setMoney] = useState(getStoredMoney)
-  const [ownedPlayers, setOwnedPlayers] = useState<TeamPlayer[]>(getStoredOwnedPlayers)
+  const [money, setMoney] = useState(0)
+  const [ownedPlayers, setOwnedPlayers] = useState<TeamPlayer[]>([])
+  const [levelUpCount, setLevelUpCount] = useState(0)
+  const [userId, setUserId] = useState<string | null>(null)
   const [winners, setWinners] = useState<WinnerRecord[]>([])
   const [winnersUnlocked, setWinnersUnlocked] = useState(false)
 
   useEffect(() => {
     fetchPlayers().then(setPlayers).catch(() => setError('Não foi possível carregar o catálogo de cartas.')).finally(() => setLoading(false))
     fetchWinners().then(setWinners).catch(() => setError('Não foi possível carregar o histórico de vencedores.'))
+    let active = true
+    const loadTeam = async (nextUserId: string | null) => {
+      if (!nextUserId) {
+        if (active) {
+          setUserId(null)
+          setMoney(0)
+          setOwnedPlayers([])
+          setLevelUpCount(0)
+        }
+        return
+      }
+      try {
+        const team = await fetchTeam(supabase, nextUserId)
+        if (active) {
+          setUserId(nextUserId)
+          setMoney(team.money)
+          setOwnedPlayers(team.players)
+          setLevelUpCount(team.levelUpCount)
+        }
+      } catch {
+        if (active) setError('Não foi possível carregar o seu time.')
+      }
+    }
+    supabase.auth.getSession().then(({ data }) => loadTeam(data.session?.user.id ?? null))
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => { void loadTeam(session?.user.id ?? null) })
+    return () => {
+      active = false
+      listener.subscription.unsubscribe()
+    }
   }, [])
 
   const filteredPlayers = useMemo(() => {
@@ -86,7 +103,7 @@ export default function App() {
   const updateMoney = (amount: number) => {
     setMoney((current) => {
       const next = Math.max(0, current + amount)
-      window.localStorage.setItem(moneyStorageKey, String(next))
+      if (userId) void saveTeam(supabase, userId, next, ownedPlayers, levelUpCount).catch(() => setError('Não foi possível salvar o orçamento.'))
       return next
     })
   }
@@ -100,14 +117,19 @@ export default function App() {
     if (positionCount >= vacancies[assignedPosition]) return `Não há mais vaga disponível para ${assignedPosition}.`
     const next = [...ownedPlayers, { id: `team-player-${Date.now()}`, skill, value, assignedPosition }]
     setOwnedPlayers(next)
-    window.localStorage.setItem(ownedPlayersStorageKey, JSON.stringify(next))
+    if (userId) void saveTeam(supabase, userId, money, next, levelUpCount).catch(() => setError('Não foi possível salvar o jogador.'))
     return null
   }
 
   const removePlayer = (playerId: string) => {
     const next = ownedPlayers.filter((player) => player.id !== playerId)
     setOwnedPlayers(next)
-    window.localStorage.setItem(ownedPlayersStorageKey, JSON.stringify(next))
+    if (userId) void saveTeam(supabase, userId, money, next, levelUpCount).catch(() => setError('Não foi possível remover o jogador.'))
+  }
+
+  const updateLevelUpCount = (nextLevelUpCount: number) => {
+    setLevelUpCount(nextLevelUpCount)
+    if (userId) void saveTeam(supabase, userId, money, ownedPlayers, nextLevelUpCount).catch(() => setError('Não foi possível salvar a configuração dos itens.'))
   }
 
   const addWinner = async (name: string) => {
@@ -127,7 +149,7 @@ export default function App() {
 
   if (page === 'home') return <HomePage onNavigate={navigateTo} money={money} ownedPlayers={ownedPlayers} onUpdateMoney={updateMoney} onRemovePlayer={removePlayer} onAddPlayer={addPlayer} />
   if (page === 'npc') return <NpcDrawPage onNavigate={navigateTo} />
-  if (page === 'items') return <ItemsPage onNavigate={navigateTo} />
+  if (page === 'items') return <ItemsPage onNavigate={navigateTo} levelUpCount={levelUpCount} onUpdateLevelUpCount={updateLevelUpCount} />
   if (page === 'winners' && !winnersUnlocked) return <WinnersPasswordPage onNavigate={navigateTo} onUnlock={() => setWinnersUnlocked(true)} />
   if (page === 'winners') return <WinnersPage onNavigate={navigateTo} winners={winners} onAddWinner={addWinner} onAddWin={addWin} onRemoveWinner={removeWinner} />
   if (page === 'rules') return <RulesPage onNavigate={navigateTo} />
