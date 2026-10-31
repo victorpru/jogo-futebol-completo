@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 
-export type HeaderPage = 'home' | 'catalog' | 'npc' | 'items' | 'winners' | 'rules'
+export type HeaderPage = 'home' | 'npc' | 'items' | 'winners' | 'rules'
 
 interface AppHeaderProps {
   activePage: HeaderPage
@@ -59,7 +59,6 @@ export function AppHeader({ activePage, onNavigate }: AppHeaderProps) {
     <div className="header-copy"><span>FOOTBALL DECK BUILDING</span><strong>Construção de deck</strong></div>
     <nav className="main-nav" aria-label="Navegação principal">
       <button className={activePage === 'home' ? 'nav-active' : ''} onClick={() => onNavigate('home')}>Home</button>
-      <button className={activePage === 'catalog' ? 'nav-active' : ''} onClick={() => onNavigate('catalog')}>Cartas</button>
       <button className={activePage === 'npc' ? 'nav-active' : ''} onClick={() => onNavigate('npc')}>Sorteio NPC</button>
       <button className={activePage === 'items' ? 'nav-active' : ''} onClick={() => onNavigate('items')}>Itens</button>
       <button className={activePage === 'winners' ? 'nav-active' : ''} onClick={() => onNavigate('winners')}>Vencedores</button>

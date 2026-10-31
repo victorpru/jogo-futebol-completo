@@ -1,38 +1,33 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { WinnerRecord } from '../components/WinnersPage'
 
-const API_URL = '/api/winners'
-let winnersRequest: Promise<WinnerRecord[]> | null = null
-
-async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...options })
-  if (!response.ok) throw new Error('Não foi possível atualizar o histórico de vencedores.')
-  return response.json() as Promise<T>
+export async function fetchWinners(supabase: SupabaseClient): Promise<WinnerRecord[]> {
+  const { data, error } = await supabase.from('winners').select('id, name, wins').order('wins', { ascending: false }).order('name')
+  if (error) throw error
+  return data ?? []
 }
 
-export async function fetchWinners(): Promise<WinnerRecord[]> {
-  if (!winnersRequest) {
-    winnersRequest = request<{ data: WinnerRecord[] }>(API_URL).then((payload) => payload.data).catch((error) => {
-      winnersRequest = null
-      throw error
-    })
-  }
-  return winnersRequest
+export async function saveWinner(supabase: SupabaseClient, name: string): Promise<WinnerRecord[]> {
+  const { data: existing, error: existingError } = await supabase.from('winners').select('id, wins').eq('name', name).maybeSingle()
+  if (existingError) throw existingError
+  const request = existing
+    ? supabase.from('winners').update({ wins: existing.wins + 1 }).eq('id', existing.id)
+    : supabase.from('winners').insert({ name, wins: 1 })
+  const { error } = await request
+  if (error) throw error
+  return fetchWinners(supabase)
 }
 
-export async function saveWinner(name: string): Promise<WinnerRecord[]> {
-  winnersRequest = null
-  const payload = await request<{ data: WinnerRecord[] }>(API_URL, { method: 'POST', body: JSON.stringify({ name }) })
-  return payload.data
+export async function addWinnerWin(supabase: SupabaseClient, id: string): Promise<WinnerRecord[]> {
+  const { data: winner, error: readError } = await supabase.from('winners').select('wins').eq('id', id).single()
+  if (readError) throw readError
+  const { error } = await supabase.from('winners').update({ wins: winner.wins + 1 }).eq('id', id)
+  if (error) throw error
+  return fetchWinners(supabase)
 }
 
-export async function addWinnerWin(id: string): Promise<WinnerRecord[]> {
-  winnersRequest = null
-  const payload = await request<{ data: WinnerRecord[] }>(`${API_URL}/${id}`, { method: 'PATCH' })
-  return payload.data
-}
-
-export async function deleteWinner(id: string): Promise<WinnerRecord[]> {
-  winnersRequest = null
-  const payload = await request<{ data: WinnerRecord[] }>(`${API_URL}/${id}`, { method: 'DELETE' })
-  return payload.data
+export async function deleteWinner(supabase: SupabaseClient, id: string): Promise<WinnerRecord[]> {
+  const { error } = await supabase.from('winners').delete().eq('id', id)
+  if (error) throw error
+  return fetchWinners(supabase)
 }
