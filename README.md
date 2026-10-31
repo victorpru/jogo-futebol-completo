@@ -8,6 +8,25 @@ Catálogo front-end de um jogo de Deck Building de futebol. Nesta etapa o projet
 - TypeScript
 - Vite
 - LocalStorage ainda não é utilizado nesta etapa, pois as regras de persistência da partida serão definidas posteriormente.
+- Supabase Auth para cadastro, login e encerramento de sessão.
+
+## Configuração do Supabase
+
+Crie um arquivo `.env.local` na raiz do projeto durante o desenvolvimento local:
+
+```env
+VITE_SUPABASE_URL=https://seu-projeto.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=sua_chave_publica
+```
+
+Na Vercel, cadastre as mesmas variáveis em **Settings → Environment Variables** para
+Production, Preview e Development. A chave publishable pode ser usada no frontend;
+chaves `service_role` ou `sb_secret_` nunca devem ser expostas.
+
+O botão **Entrar** no cabeçalho permite criar uma conta, fazer login e sair. A
+confirmação de e-mail segue a configuração de Authentication → Providers no
+projeto Supabase. Cartas, sorteio NPC e histórico permanecem nas APIs locais
+existentes; nenhuma tabela de jogabilidade foi criada nesta etapa.
 
 ## Catálogo e API fake
 
