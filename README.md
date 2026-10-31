@@ -23,7 +23,10 @@ Na Vercel, cadastre as mesmas variáveis em **Settings → Environment Variables
 Production, Preview e Development. A chave publishable pode ser usada no frontend;
 chaves `service_role` ou `sb_secret_` nunca devem ser expostas.
 
-O botão **Entrar** no cabeçalho permite criar uma conta, fazer login e sair. A
+O botão **Entrar** no cabeçalho permite criar uma conta, fazer login com e-mail
+ou Google e sair. Para ativar o Google, configure o provedor em
+Authentication → Providers no Supabase e informe a URL do site em
+Authentication → URL Configuration. A
 confirmação de e-mail segue a configuração de Authentication → Providers no
 projeto Supabase. Para salvar o orçamento e o elenco por usuário, execute o
 conteúdo de [team-state.sql](./supabase/team-state.sql) no SQL Editor do

@@ -45,6 +45,15 @@ export function AppHeader({ activePage, onNavigate }: AppHeaderProps) {
     if (error) setMessage(error.message)
   }
 
+  const signInWithGoogle = async () => {
+    setMessage('')
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin },
+    })
+    if (error) setMessage(error.message)
+  }
+
   return <header className="header">
     <div className="logo"><span>◆</span> DECK<span>FC</span></div>
     <div className="header-copy"><span>FOOTBALL DECK BUILDING</span><strong>Construção de deck</strong></div>
@@ -67,6 +76,7 @@ export function AppHeader({ activePage, onNavigate }: AppHeaderProps) {
         <label>E-mail<input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} /></label>
         <label>Senha<input type="password" required minLength={6} value={password} onChange={(event) => setPassword(event.target.value)} /></label>
         <button className="auth-submit" type="submit" disabled={busy}>{busy ? 'Aguarde...' : mode === 'login' ? 'Entrar' : 'Criar conta'}</button>
+        <button className="auth-google" type="button" onClick={signInWithGoogle}>Continuar com Google</button>
         {message && <p className="auth-message">{message}</p>}
         <button className="auth-switch" type="button" onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setMessage('') }}>
           {mode === 'login' ? 'Ainda não tenho conta' : 'Já tenho uma conta'}
