@@ -97,11 +97,6 @@ export default function App() {
     if (userId) void saveTeam(supabase, userId, money, next, levelUpCount).catch(() => setError('Não foi possível remover o jogador.'))
   }
 
-  const updateLevelUpCount = (nextLevelUpCount: number) => {
-    setLevelUpCount(nextLevelUpCount)
-    if (userId) void saveTeam(supabase, userId, money, ownedPlayers, nextLevelUpCount).catch(() => setError('Não foi possível salvar a configuração dos itens.'))
-  }
-
   const addWinner = async (name: string) => {
     const normalizedName = name.trim()
     if (!normalizedName) return 'Informe o nome do vencedor.'
@@ -119,7 +114,7 @@ export default function App() {
 
   if (page === 'home') return <HomePage onNavigate={navigateTo} money={money} ownedPlayers={ownedPlayers} onUpdateMoney={updateMoney} onRemovePlayer={removePlayer} onAddPlayer={addPlayer} />
   if (page === 'npc') return <NpcDrawPage onNavigate={navigateTo} />
-  if (page === 'items') return <ItemsPage onNavigate={navigateTo} levelUpCount={levelUpCount} onUpdateLevelUpCount={updateLevelUpCount} />
+  if (page === 'items') return <ItemsPage onNavigate={navigateTo} userId={userId} />
   if (page === 'winners') return <WinnersPage onNavigate={navigateTo} winners={winners} isAdmin={isAdmin} onAddWinner={addWinner} onAddWin={addWin} onRemoveWinner={removeWinner} />
   if (page === 'rules') return <RulesPage onNavigate={navigateTo} />
   return <HomePage onNavigate={navigateTo} money={money} ownedPlayers={ownedPlayers} onUpdateMoney={updateMoney} onRemovePlayer={removePlayer} onAddPlayer={addPlayer} />

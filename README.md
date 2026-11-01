@@ -41,6 +41,11 @@ Para configurar o histórico de vencedores, execute [winners.sql](./supabase/win
 no SQL Editor. Usuários autenticados podem visualizar o histórico, mas somente
 `prudencio.vic@gmail.com` pode adicionar, alterar ou remover registros.
 
+Para salvar os sorteios de patrocínios e LEVEL-UP por usuário, execute
+[item-draw-state.sql](./supabase/item-draw-state.sql) no SQL Editor. Cada
+resultado sorteado é removido do pool até que o usuário clique em limpar
+sorteios. Prêmios e investimentos continuam sorteios sem pool persistente.
+
 ## Navegação
 
 A aplicação possui três áreas separadas:
