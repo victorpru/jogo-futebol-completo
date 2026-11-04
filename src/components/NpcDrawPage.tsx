@@ -1,18 +1,39 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { npcTeams } from '../data/npcTeams'
 import { drawNpcPlayers, getDrawnPower } from '../utils/npcDraw'
 import type { NpcDrawnPlayer } from '../types/npcTeam'
+import { addDrawParticipant, fetchDrawParticipants, removeDrawParticipant, type DrawParticipant } from '../services/participantDrawApi'
 import { AppHeader } from './AppHeader'
 import type { HeaderPage } from './AppHeader'
+import { supabase } from '../lib/supabase'
+import { fetchItemDrawState, saveItemDrawState } from '../services/itemDrawApi'
+import type { ItemDrawState } from './ItemsPage'
 
-export function NpcDrawPage({ onNavigate }: { onNavigate: (page: HeaderPage) => void }) {
+const prizeValues = [7, 7, 7, 7, 7, 7, 7, 7, 10, 10, 10, 10, 10, 10, 10, 10, 12, 12, 12, 12, 15, 15, 15, 15, 18, 18, 20, 20, 20, 20, 25, 25]
+
+export function NpcDrawPage({ onNavigate, userId }: { onNavigate: (page: HeaderPage) => void; userId: string | null }) {
   const [teamId, setTeamId] = useState(npcTeams[0].id)
   const [drawn, setDrawn] = useState<NpcDrawnPlayer[]>([])
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [drawOrder, setDrawOrder] = useState<NpcDrawnPlayer[]>([])
   const [upgrades, setUpgrades] = useState<number[]>(() => Array.from({ length: npcTeams[0].playerPowers.length }, () => 0))
-  const team = useMemo(() => npcTeams.find((item) => item.id === teamId) ?? npcTeams[0], [teamId])
+  const [participants, setParticipants] = useState<DrawParticipant[]>([])
+  const [participantName, setParticipantName] = useState('')
+  const [participantDraw, setParticipantDraw] = useState<DrawParticipant[]>([])
+  const [participantError, setParticipantError] = useState<string | null>(null)
+  const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null)
+  const [isPrizeModalOpen, setIsPrizeModalOpen] = useState(false)
+  const [prizeState, setPrizeState] = useState<ItemDrawState | null>(null)
+  const [prizeResult, setPrizeResult] = useState<number | 'LEVEL-UP' | null>(null)
+  const [prizeError, setPrizeError] = useState<string | null>(null)
+  const selectedParticipant = participants.find((participant) => participant.id === selectedParticipantId)
+  const team = useMemo(() => {
+    if (selectedParticipant) {
+      return { id: selectedParticipant.id, name: selectedParticipant.name, playerPowers: Array.from({ length: 11 }, () => 0), power: 0 }
+    }
+    return npcTeams.find((item) => item.id === teamId) ?? npcTeams[0]
+  }, [selectedParticipant, teamId])
   const sortedTeams = useMemo(() => [...npcTeams].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')), [])
   const currentPlayer = drawOrder[currentIndex]
   const nextPlayer = drawOrder[currentIndex + 1]
@@ -23,6 +44,33 @@ export function NpcDrawPage({ onNavigate }: { onNavigate: (page: HeaderPage) => 
     setDrawOrder(drawNpcPlayers(team, upgrades))
     setCurrentIndex(-1)
     setIsModalOpen(true)
+  }
+
+  const drawTeam = () => {
+    const availableTeams = [
+      ...npcTeams.map((item) => ({ type: 'npc' as const, item })),
+      ...participants.map((item) => ({ type: 'participant' as const, item })),
+    ]
+    const selected = availableTeams[Math.floor(Math.random() * availableTeams.length)]
+    if (!selected) return
+    if (selected.type === 'participant') {
+      setSelectedParticipantId(selected.item.id)
+      setDrawn([])
+      setDrawOrder([])
+      setCurrentIndex(0)
+      setUpgrades(Array.from({ length: 11 }, () => 0))
+      setIsModalOpen(false)
+      return
+    }
+    const randomTeam = selected.item
+    if (!randomTeam) return
+    setSelectedParticipantId(null)
+    setTeamId(randomTeam.id)
+    setDrawn([])
+    setDrawOrder([])
+    setCurrentIndex(0)
+    setUpgrades(Array.from({ length: randomTeam.playerPowers.length }, () => 0))
+    setIsModalOpen(false)
   }
 
   const showNextPlayer = () => {
@@ -48,14 +96,103 @@ export function NpcDrawPage({ onNavigate }: { onNavigate: (page: HeaderPage) => 
   const upgradeTotal = upgrades.reduce((total, value) => total + value, 0)
   const upgradedPower = team.power + upgradeTotal
 
+  useEffect(() => {
+    fetchDrawParticipants(supabase).then(setParticipants).catch(() => setParticipantError('Não foi possível carregar os participantes.'))
+  }, [])
+
+  useEffect(() => {
+    if (!userId) {
+      setPrizeState(null)
+      return
+    }
+    fetchItemDrawState(supabase, userId)
+      .then((state) => setPrizeState(state ?? { levelUpTotal: 0, levelUpRemaining: [], blueRemaining: [], yellowRemaining: [] }))
+      .catch(() => setPrizeError('Não foi possível carregar os prêmios.'))
+  }, [userId])
+
+  const addParticipant = async () => {
+    const name = participantName.trim()
+    if (!name) {
+      setParticipantError('Digite o nome do participante.')
+      return
+    }
+    try {
+      const participant = await addDrawParticipant(supabase, name)
+      setParticipants((current) => [...current, participant])
+      setParticipantName('')
+      setParticipantError(null)
+    } catch {
+      setParticipantError('Não foi possível adicionar o participante.')
+    }
+  }
+
+  const removeParticipant = async (id: string) => {
+    try {
+      await removeDrawParticipant(supabase, id)
+      setParticipants((current) => current.filter((participant) => participant.id !== id))
+      setParticipantDraw((current) => current.filter((participant) => participant.id !== id))
+    } catch {
+      setParticipantError('Não foi possível remover o participante.')
+    }
+  }
+
+  const drawParticipants = () => {
+    const shuffled = [...participants]
+    for (let index = shuffled.length - 1; index > 0; index -= 1) {
+      const randomIndex = Math.floor(Math.random() * (index + 1))
+      const temporary = shuffled[index]
+      shuffled[index] = shuffled[randomIndex]
+      shuffled[randomIndex] = temporary
+    }
+
+    setParticipantDraw(shuffled)
+  }
+
+  const openPrizeModal = () => {
+    setPrizeResult(null)
+    setPrizeError(null)
+    setIsPrizeModalOpen(true)
+  }
+
+  const drawPrize = () => {
+    if (!prizeState || prizeResult !== null) return
+    const options: Array<number | 'LEVEL-UP'> = [...prizeValues, ...prizeState.levelUpRemaining.map(() => 'LEVEL-UP' as const)]
+    const result = options[Math.floor(Math.random() * options.length)]
+    if (result === undefined) return
+    setPrizeResult(result)
+    if (result === 'LEVEL-UP' && userId) {
+      const nextState = { ...prizeState, levelUpRemaining: prizeState.levelUpRemaining.slice(1) }
+      setPrizeState(nextState)
+      void saveItemDrawState(supabase, userId, nextState).catch(() => setPrizeError('O prêmio foi revelado, mas não foi possível salvar o LEVEL-UP.'))
+    }
+  }
+
   return <main className="npc-page">
     <AppHeader activePage="npc" onNavigate={onNavigate} />
-    <section className="npc-hero"><div><span className="eyebrow">SORTEIO DE TIME NPC</span><h1>Revele os 11 jogadores<br /><em>do seu adversário.</em></h1><p>Cada time possui uma distribuição fixa de poderes. O sorteio apenas embaralha os 11 jogadores, sem repetir nenhum jogador na mesma rodada.</p></div><div className="npc-rule"><strong>11</strong><span>JOGADORES POR TIME</span><small>Distribuição baseada na tabela de referência</small></div></section>
-    <section className="draw-panel"><div className="team-selector"><label>Escolha o time NPC</label><select value={teamId} onChange={(event) => { setTeamId(event.target.value); setDrawn([]); resetUpgrades() }}>{sortedTeams.map((item) => <option value={item.id} key={item.id}>{item.name} · Poder {item.power}</option>)}</select><div className="team-summary"><span>Poder atual</span><strong>{upgradedPower}</strong><small>{upgradeTotal ? `+${upgradeTotal} em upgrades` : 'sem upgrades'}</small></div></div><button className="draw-button" onClick={openDraw}>Sortear jogadores <span>↗</span></button></section>
+    <section className="npc-hero"><div className="npc-rule"><strong>11</strong><span>JOGADORES POR TIME</span><small>Distribuição baseada na tabela de referência</small></div></section>
+    <section className="draw-panel"><div className="team-selector"><label>Escolha o time NPC</label><select value={selectedParticipantId ? `participant:${selectedParticipantId}` : teamId} onChange={(event) => { const value = event.target.value; if (value.startsWith('participant:')) { setSelectedParticipantId(value.slice('participant:'.length)); setDrawn([]); setUpgrades(Array.from({ length: 11 }, () => 0)); return } setSelectedParticipantId(null); setTeamId(value); setDrawn([]); resetUpgrades() }}>{sortedTeams.map((item) => <option value={item.id} key={item.id}>{item.name} · Poder {item.power}</option>)}{participants.length > 0 && <optgroup label="Times cadastrados">{participants.map((participant) => <option value={`participant:${participant.id}`} key={participant.id}>{participant.name}</option>)}</optgroup>}</select><div className="team-summary"><span>Poder atual</span><strong>{upgradedPower}</strong><small>{upgradeTotal ? `+${upgradeTotal} em upgrades` : 'sem upgrades'}</small></div></div><div className="draw-panel-buttons"><button className="team-draw-button" onClick={drawTeam}>Sortear time <span>↗</span></button><button className="draw-button" onClick={openDraw}>Sortear jogadores <span>↗</span></button></div></section>
+    <section className="match-actions"><button className="win-match-button" onClick={openPrizeModal}>Venci a partida <span>🏆</span></button></section>
+    {isPrizeModalOpen && <div className="item-modal-backdrop" role="presentation" onClick={() => setIsPrizeModalOpen(false)}>
+      <section className="item-modal" role="dialog" aria-modal="true" aria-labelledby="npc-prize-title" onClick={(event) => event.stopPropagation()}>
+        <button className="item-modal-close" onClick={() => setIsPrizeModalOpen(false)} aria-label="Fechar sorteio">×</button>
+        <span className="eyebrow">PRÊMIO DA VITÓRIA</span>
+        <h2 id="npc-prize-title">Prêmios <small>32 + {prizeState?.levelUpRemaining.length ?? 0} LEVEL-UP</small></h2>
+        <div className="item-draw-value">{prizeResult === null ? '—' : prizeResult === 'LEVEL-UP' ? <strong>LEVEL-UP</strong> : <><strong>Prêmio</strong><span>€ {prizeResult} mi</span></>}</div>
+        {prizeError && <p className="form-error">{prizeError}</p>}
+        {!userId && <p className="auth-message">Entre na sua conta para sortear e salvar o LEVEL-UP.</p>}
+        <div className="item-draw-actions"><button className="primary-draw-button" onClick={drawPrize} disabled={!userId || prizeState === null || prizeResult !== null}>{prizeResult === null ? 'Sortear prêmio' : 'Prêmio revelado'}</button></div>
+      </section>
+    </div>}
     <section className="upgrade-panel"><div><span className="eyebrow">AJUSTES OPCIONAIS</span><h2>Aplicar upgrades antes do sorteio</h2><p>Cada upgrade adiciona +1 ao jogador escolhido. Não existe limite acima de 21.</p></div><button className="reset-upgrades" onClick={resetUpgrades} disabled={!upgradeTotal}>Limpar upgrades</button><div className="upgrade-list">{team.playerPowers.map((power, index) => <div className="upgrade-slot" key={`${team.id}-${index}`}><span>Jogador {index + 1}</span><strong>{power + (upgrades[index] ?? 0)}</strong>{upgrades[index] > 0 && <em>+{upgrades[index]}</em>}<button onClick={() => addUpgrade(index)} aria-label={`Adicionar upgrade ao jogador ${index + 1}`}>+ UP</button></div>)}</div></section>
-    <div className="draw-heading"><div><h2>{drawn.length ? `Jogadores sorteados · ${team.name}` : 'Aguardando sorteio'}</h2><p>{drawn.length ? 'Nenhum jogador se repete neste sorteio.' : 'Selecione um time e revele sua composição.'}</p></div>{drawn.length > 0 && <div className="draw-total"><span>PODER SORTEADO</span><strong>{getDrawnPower(drawn)}</strong></div>}</div>
-    {drawn.length === 0 ? <div className="draw-empty"><div>♙</div><h3>O time está pronto para ser sorteado</h3><p>Os poderes individuais serão distribuídos em ordem aleatória.</p></div> : <section className="draw-grid">{drawn.map((player) => <article className="npc-player-card" key={player.id}><span className="player-number">{String(player.number).padStart(2, '0')}</span><div className="npc-player-avatar">{player.power}</div><div><span>JOGADOR NPC</span><h3>Jogador {player.number}</h3><p>{player.power >= 20 ? 'Nível lendário' : player.power >= 18 ? 'Nível elite' : 'Nível competitivo'}</p></div><strong>{player.power}</strong></article>)}</section>}
-    <footer>O sorteio não utiliza cartas do catálogo e não altera nenhum dado do jogo.</footer>
+    {drawn.length > 0 && <div className="draw-heading"><div><h2>Jogadores sorteados · {team.name}</h2><p>Nenhum jogador se repete neste sorteio.</p></div><div className="draw-total"><span>PODER SORTEADO</span><strong>{getDrawnPower(drawn)}</strong></div></div>}
+    {drawn.length > 0 && <section className="draw-grid">{drawn.map((player) => <article className="npc-player-card" key={player.id}><span className="player-number">{String(player.number).padStart(2, '0')}</span><div className="npc-player-avatar">{player.power}</div><div><span>JOGADOR NPC</span><h3>Jogador {player.number}</h3><p>{player.power >= 20 ? 'Nível lendário' : player.power >= 18 ? 'Nível elite' : 'Nível competitivo'}</p></div><strong>{player.power}</strong></article>)}</section>}
+    <section className="participant-panel">
+      <div className="participant-heading"><div><span className="eyebrow">PARTICIPANTES</span><h2>Times cadastrados</h2></div><button className="participant-draw-button" onClick={drawParticipants} disabled={!participants.length}>Sortear todos</button></div>
+      <div className="participant-form"><input value={participantName} onChange={(event) => setParticipantName(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') void addParticipant() }} placeholder="Nome do participante" maxLength={80} /><button onClick={() => void addParticipant()}>Adicionar</button></div>
+      {participantError && <p className="form-error">{participantError}</p>}
+      <div className="participant-list">{participants.map((participant) => <div className="participant-item" key={participant.id}><strong>{participant.name}</strong><button onClick={() => void removeParticipant(participant.id)} aria-label={`Remover ${participant.name}`}>×</button></div>)}</div>
+      {participantDraw.length > 0 && <div className="participant-results"><h3>Ordem sorteada</h3>{participantDraw.map((participant, index) => <div className="participant-result" key={participant.id}><span>{index + 1}</span><strong>{participant.name}</strong></div>)}</div>}
+    </section>
     {isModalOpen && <div className="draw-modal-backdrop" role="presentation" onClick={closeDraw}>
       <section className="draw-modal" role="dialog" aria-modal="true" aria-labelledby="draw-modal-title" onClick={(event) => event.stopPropagation()}>
         <button className="modal-close" aria-label="Fechar sorteio" onClick={closeDraw}>×</button>

@@ -113,7 +113,7 @@ export default function App() {
   }
 
   if (page === 'home') return <HomePage onNavigate={navigateTo} money={money} ownedPlayers={ownedPlayers} onUpdateMoney={updateMoney} onRemovePlayer={removePlayer} onAddPlayer={addPlayer} />
-  if (page === 'npc') return <NpcDrawPage onNavigate={navigateTo} />
+  if (page === 'npc') return <NpcDrawPage onNavigate={navigateTo} userId={userId} />
   if (page === 'items') return <ItemsPage onNavigate={navigateTo} userId={userId} />
   if (page === 'winners') return <WinnersPage onNavigate={navigateTo} winners={winners} isAdmin={isAdmin} onAddWinner={addWinner} onAddWin={addWin} onRemoveWinner={removeWinner} />
   if (page === 'rules') return <RulesPage onNavigate={navigateTo} />

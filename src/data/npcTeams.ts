@@ -22,6 +22,6 @@ export const npcTeams: NpcTeam[] = [
   { id: 'npc-internacional', name: 'Internacional', playerPowers: powers([1, 20], [5, 19], [3, 18], [1, 17], [1, 15]), power: 201 },
   { id: 'npc-flamengo', name: 'Flamengo', playerPowers: powers([1, 21], [2, 20], [3, 19], [2, 18], [3, 17]), power: 205 },
   { id: 'npc-botafogo', name: 'Botafogo', playerPowers: powers([4, 19], [1, 18], [1, 17], [2, 16], [3, 15]), power: 188 },
-  { id: 'npc-vasco', name: 'Vasco', playerPowers: powers([1, 20], [2, 19], [2, 18], [1, 17], [2, 16], [3, 15]), power: 185 },
+  { id: 'npc-vasco', name: 'Vasco', playerPowers: powers([2, 19], [2, 18], [1, 17], [4, 16], [2, 15]), power: 185 },
   { id: 'npc-america-mg', name: 'América-MG', playerPowers: powers([1, 20], [2, 19], [3, 17], [3, 16], [2, 15]), power: 187 },
 ]

@@ -25,6 +25,7 @@ const positionVacancies = { GOL: 1, ZAG: 2, LAT: 2, VOL: 1, MEI: 2, ATA: 3 }
 
 export function HomePage({ onNavigate, money, ownedPlayers, onUpdateMoney, onRemovePlayer, onAddPlayer }: HomePageProps) {
   const totalTeamValue = ownedPlayers.reduce((total, player) => total + player.value, 0)
+  const totalTeamPower = ownedPlayers.reduce((total, player) => total + player.skill, 0)
   return <main className="home-page">
     <AppHeader activePage="home" onNavigate={onNavigate} />
     <section className="home-hero">
@@ -39,7 +40,7 @@ export function HomePage({ onNavigate, money, ownedPlayers, onUpdateMoney, onRem
         <MoneyControls onUpdateMoney={onUpdateMoney} />
       </article>
       <article className="squad-panel">
-        <div className="squad-heading"><div><span className="eyebrow">MEU ELENCO</span><h2>Jogadores que você tem <span>{ownedPlayers.length}/11</span></h2></div><div className="team-value"><small>VALOR TOTAL DO TIME</small><strong>€ {totalTeamValue} mi</strong></div></div>
+        <div className="squad-heading"><div><span className="eyebrow">MEU ELENCO</span><h2>Jogadores que você tem <span>{ownedPlayers.length}/11</span><span className="team-power">PODER TOTAL <strong>{totalTeamPower}</strong></span></h2></div><div className="team-value"><small>VALOR TOTAL DO TIME</small><strong>€ {totalTeamValue} mi</strong></div></div>
         <PlayerForm onAddPlayer={onAddPlayer} disabled={ownedPlayers.length >= 11} occupied={ownedPlayers.reduce<Record<PlayerPosition, number>>((counts, player) => ({ ...counts, [player.assignedPosition]: counts[player.assignedPosition] + 1 }), { GOL: 0, ZAG: 0, LAT: 0, VOL: 0, MEI: 0, ATA: 0 })} />
         <div className="positions-grid">{positions.map((position) => {
           const positionPlayers = ownedPlayers.filter((player) => player.assignedPosition === position)

@@ -1,6 +1,46 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { DrawType, ItemDrawState } from '../components/ItemsPage'
 
+export interface SponsorDraw {
+  sponsorType: 'blue' | 'yellow'
+  sponsorIndex: number
+  value: number
+  userId: string
+}
+
+export async function fetchSponsorDraws(supabase: SupabaseClient): Promise<SponsorDraw[]> {
+  const { data, error } = await supabase
+    .from('item_sponsor_draw')
+    .select('sponsor_type, sponsor_index, value, user_id')
+  if (error) throw error
+  return (data ?? []).map((item) => ({
+    sponsorType: item.sponsor_type,
+    sponsorIndex: item.sponsor_index,
+    value: item.value,
+    userId: item.user_id,
+  }))
+}
+
+export async function saveSponsorDraw(supabase: SupabaseClient, draw: SponsorDraw) {
+  const { error } = await supabase.from('item_sponsor_draw').insert({
+    sponsor_type: draw.sponsorType,
+    sponsor_index: draw.sponsorIndex,
+    value: draw.value,
+    user_id: draw.userId,
+  })
+  if (error) throw error
+}
+
+export async function deleteSponsorDraw(supabase: SupabaseClient, draw: SponsorDraw) {
+  const { error } = await supabase
+    .from('item_sponsor_draw')
+    .delete()
+    .eq('sponsor_type', draw.sponsorType)
+    .eq('sponsor_index', draw.sponsorIndex)
+    .eq('user_id', draw.userId)
+  if (error) throw error
+}
+
 export async function fetchItemDrawState(supabase: SupabaseClient, userId: string): Promise<ItemDrawState | null> {
   const { data, error } = await supabase
     .from('item_draw_state')
