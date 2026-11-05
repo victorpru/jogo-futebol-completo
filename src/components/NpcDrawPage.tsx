@@ -10,6 +10,13 @@ import { fetchItemDrawState, saveItemDrawState } from '../services/itemDrawApi'
 import type { ItemDrawState } from './ItemsPage'
 
 const prizeValues = [7, 7, 7, 7, 7, 7, 7, 7, 10, 10, 10, 10, 10, 10, 10, 10, 12, 12, 12, 12, 15, 15, 15, 15, 18, 18, 20, 20, 20, 20, 25, 25]
+const championshipRewards = {
+  Paulista: [10, 10, 5],
+  'Copa do Brasil': [15, 15, 7],
+  Brasileiro: [20, 20, 10],
+  Libertadores: [25, 25, 12],
+} as const
+type Championship = keyof typeof championshipRewards
 
 export function NpcDrawPage({ onNavigate, userId, money, teamPower, onPrizeMoney }: { onNavigate: (page: HeaderPage) => void; userId: string | null; money: number; teamPower: number; onPrizeMoney: (amount: number) => void }) {
   const [teamId, setTeamId] = useState(npcTeams[0].id)
@@ -26,6 +33,7 @@ export function NpcDrawPage({ onNavigate, userId, money, teamPower, onPrizeMoney
   const [prizeState, setPrizeState] = useState<ItemDrawState | null>(null)
   const [prizeResult, setPrizeResult] = useState<number | 'LEVEL-UP' | null>(null)
   const [prizeError, setPrizeError] = useState<string | null>(null)
+  const [championship, setChampionship] = useState<Championship>('Paulista')
   const selectedParticipant = participants.find((participant) => participant.id === selectedParticipantId)
   const team = useMemo(() => {
     if (selectedParticipant) {
@@ -152,6 +160,13 @@ export function NpcDrawPage({ onNavigate, userId, money, teamPower, onPrizeMoney
       setPrizeState(nextState)
       void saveItemDrawState(supabase, userId, nextState).catch(() => setPrizeError('O prêmio foi revelado, mas não foi possível salvar o LEVEL-UP.'))
     }
+
+  }
+
+  const awardChampionship = (place: 1 | 2 | 3) => {
+    const fixedReward = championshipRewards[championship][place - 1]
+    onPrizeMoney(fixedReward)
+    if (place === 1) openPrizeModal()
   }
 
   return <main className="npc-page">
@@ -159,6 +174,17 @@ export function NpcDrawPage({ onNavigate, userId, money, teamPower, onPrizeMoney
     <section className="npc-hero"><div className="npc-rule"><strong>11</strong><span>JOGADORES POR TIME</span><small>Distribuição baseada na tabela de referência</small></div></section>
     <section className="draw-panel"><div className="team-selector"><label>Escolha o time NPC</label><select value={selectedParticipantId ? `participant:${selectedParticipantId}` : teamId} onChange={(event) => { const value = event.target.value; if (value.startsWith('participant:')) { setSelectedParticipantId(value.slice('participant:'.length)); setDrawn([]); setUpgrades(Array.from({ length: 11 }, () => 0)); return } setSelectedParticipantId(null); setTeamId(value); setDrawn([]); resetUpgrades() }}>{sortedTeams.map((item) => <option value={item.id} key={item.id}>{item.name} · Poder {item.power}</option>)}{participants.length > 0 && <optgroup label="Times cadastrados">{participants.map((participant) => <option value={`participant:${participant.id}`} key={participant.id}>{participant.name}</option>)}</optgroup>}</select><div className="team-summary"><span>Poder atual</span><strong>{upgradedPower}</strong><small>{upgradeTotal ? `+${upgradeTotal} em upgrades` : 'sem upgrades'}</small></div></div><div className="draw-panel-buttons"><button className="team-draw-button" onClick={drawTeam}>Sortear time <span>↗</span></button><button className="draw-button" onClick={openDraw}>Sortear jogadores <span>↗</span></button></div></section>
     <section className="match-actions"><button className="win-match-button" onClick={openPrizeModal}>Venci a partida <span>🏆</span></button></section>
+    <section className="championship-rewards">
+      <div><span className="eyebrow">PREMIAÇÃO DO CAMPEONATO</span><h2>Adicionar premiação ao caixa</h2><p>O primeiro lugar também abre o sorteio de um prêmio adicional.</p></div>
+      <select value={championship} onChange={(event) => setChampionship(event.target.value as Championship)} aria-label="Campeonato">
+        {Object.keys(championshipRewards).map((name) => <option key={name}>{name}</option>)}
+      </select>
+      <div className="championship-reward-buttons">
+        <button onClick={() => awardChampionship(1)} disabled={!userId}>1º lugar · € {championshipRewards[championship][0]} mi + prêmio</button>
+        <button onClick={() => awardChampionship(2)} disabled={!userId}>2º lugar · € {championshipRewards[championship][1]} mi</button>
+        <button onClick={() => awardChampionship(3)} disabled={!userId}>3º lugar · € {championshipRewards[championship][2]} mi</button>
+      </div>
+    </section>
     {isPrizeModalOpen && <div className="item-modal-backdrop" role="presentation" onClick={() => setIsPrizeModalOpen(false)}>
       <section className="item-modal" role="dialog" aria-modal="true" aria-labelledby="npc-prize-title" onClick={(event) => event.stopPropagation()}>
         <button className="item-modal-close" onClick={() => setIsPrizeModalOpen(false)} aria-label="Fechar sorteio">×</button>
