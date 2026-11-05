@@ -4,8 +4,13 @@ create table if not exists public.item_draw_state (
   level_up_remaining jsonb not null default '[]'::jsonb,
   blue_remaining jsonb not null default '[]'::jsonb,
   yellow_remaining jsonb not null default '[]'::jsonb,
+  sponsorship_money_claimed integer not null default 0 check (sponsorship_money_claimed >= 0),
   updated_at timestamptz not null default now()
 );
+
+alter table public.item_draw_state
+  add column if not exists sponsorship_money_claimed integer not null default 0
+  check (sponsorship_money_claimed >= 0);
 
 create table if not exists public.item_sponsor_draw (
   sponsor_type text not null check (sponsor_type in ('blue', 'yellow')),

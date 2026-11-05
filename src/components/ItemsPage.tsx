@@ -7,6 +7,9 @@ import { deleteSponsorDraw, fetchItemDrawState, fetchSponsorDraws, saveItemDrawS
 interface ItemsPageProps {
   onNavigate: (page: HeaderPage) => void
   userId: string | null
+  money: number
+  teamPower: number
+  onPrizeMoney: (amount: number) => void
   openPrizeDraw?: boolean
   onPrizeDrawOpened?: () => void
 }
@@ -18,6 +21,7 @@ export interface ItemDrawState {
   levelUpRemaining: number[]
   blueRemaining: number[]
   yellowRemaining: number[]
+  sponsorshipMoneyClaimed: number
 }
 
 const blueValues = [4, 6, 6, 7, 8, 10, 12, 15, 15]
@@ -56,7 +60,7 @@ function prepareDrawItems(type: DrawType): DrawItem[] {
   return items
 }
 
-export function ItemsPage({ onNavigate, userId, openPrizeDraw = false, onPrizeDrawOpened }: ItemsPageProps) {
+export function ItemsPage({ onNavigate, userId, money, teamPower, onPrizeMoney, openPrizeDraw = false, onPrizeDrawOpened }: ItemsPageProps) {
   const [drawType, setDrawType] = useState<DrawType | null>(null)
   const [drawnItems, setDrawnItems] = useState<DrawItem[]>([])
   const [pendingItems, setPendingItems] = useState<DrawItem[]>([])
@@ -70,7 +74,7 @@ export function ItemsPage({ onNavigate, userId, openPrizeDraw = false, onPrizeDr
   useEffect(() => {
     if (!userId) return
     Promise.all([fetchItemDrawState(supabase, userId), fetchSponsorDraws(supabase)]).then(([saved, sponsors]) => {
-      setDrawState(saved ?? { levelUpTotal: 0, levelUpRemaining: [], blueRemaining: [...blueValues], yellowRemaining: [...yellowValues] })
+      setDrawState(saved ?? { levelUpTotal: 0, levelUpRemaining: [], blueRemaining: [...blueValues], yellowRemaining: [...yellowValues], sponsorshipMoneyClaimed: 0 })
       setSponsorDraws(sponsors)
     }).catch(() => setError('Não foi possível carregar os sorteios dos itens.')).finally(() => setLoadingState(false))
   }, [userId])
@@ -108,7 +112,7 @@ export function ItemsPage({ onNavigate, userId, openPrizeDraw = false, onPrizeDr
 
   const clearDraw = () => {
     if (!drawState) return
-    persistState({ ...drawState, levelUpTotal: 0, levelUpRemaining: [] })
+    persistState({ ...drawState, levelUpTotal: 0, levelUpRemaining: [], sponsorshipMoneyClaimed: 0 })
     if (userId) {
       const ownDraws = sponsorDraws.filter((draw) => draw.userId === userId)
       void Promise.all(ownDraws.map((draw) => deleteSponsorDraw(supabase, draw)))
@@ -134,6 +138,10 @@ export function ItemsPage({ onNavigate, userId, openPrizeDraw = false, onPrizeDr
   const totalSponsorship = sponsorDraws
     .filter((draw) => draw.userId === userId)
     .reduce((total, draw) => total + draw.value, 0)
+  const claimSponsorship = () => {
+    if (totalSponsorship <= 0) return
+    onPrizeMoney(totalSponsorship)
+  }
 
   const drawItem = () => {
     if (!drawType) return
@@ -145,6 +153,7 @@ export function ItemsPage({ onNavigate, userId, openPrizeDraw = false, onPrizeDr
     setDrawnItems((items) => [...items, item])
     setPendingItems((items) => items.filter((_, index) => index !== itemIndex))
     setCurrentItem(item)
+    if (drawType === 'prizes' && item.label === 'Prêmio') onPrizeMoney(item.value)
     if (drawState && (drawType === 'blue' || drawType === 'yellow' || (drawType === 'prizes' && item.label === 'LEVEL-UP'))) {
       if (drawType === 'prizes' && item.label === 'LEVEL-UP') {
         const levelUpIndex = pendingItems
@@ -214,7 +223,7 @@ export function ItemsPage({ onNavigate, userId, openPrizeDraw = false, onPrizeDr
   }
 
   return <main className="items-page">
-    <AppHeader activePage="items" onNavigate={onNavigate} />
+    <AppHeader activePage="items" onNavigate={onNavigate} money={money} teamPower={teamPower} />
     <section className="items-heading">
       <div><h2>Categorias de itens</h2><p>Sorteios únicos · Resultados revelados um por vez</p></div>
       <span className="items-status"><i /> EM CONFIGURAÇÃO</span>
@@ -236,7 +245,7 @@ export function ItemsPage({ onNavigate, userId, openPrizeDraw = false, onPrizeDr
         {(category.key === 'yellow' || category.key === 'blue') && sponsorDraws.filter((draw) => draw.sponsorType === category.key && draw.userId === userId).map((draw) => <div className="sponsor-draw-record" key={`${draw.sponsorType}-${draw.sponsorIndex}`}><span>€ {draw.value} mi</span></div>)}
       </article>)}
     </section>
-    <div className="sponsorship-total"><span>VALOR TOTAL DOS PATROCÍNIOS</span><strong>€ {totalSponsorship} mi</strong></div>
+    <div className="sponsorship-total"><div><span>VALOR TOTAL DOS PATROCÍNIOS</span><strong>€ {totalSponsorship} mi</strong></div><button onClick={claimSponsorship} disabled={totalSponsorship <= 0}>Adicionar valor ao caixa</button></div>
     <div className="item-draw-actions"><button onClick={clearDraw} disabled={!userId || isLoading}>Limpar sorteios</button></div>
     {!userId && <p className="auth-message">Entre na sua conta para usar e salvar os sorteios.</p>}
     {error && <p className="form-error">{error}</p>}
@@ -256,7 +265,7 @@ export function ItemsPage({ onNavigate, userId, openPrizeDraw = false, onPrizeDr
             <button onClick={() => void chooseSponsor('candidate')}><strong>TROCAR</strong><span>€ {replacement.candidate.value} mi</span></button>
           </div>
         </div>}
-        <div className="item-draw-actions"><button className="primary-draw-button" onClick={drawItem} disabled={drawnItems.length >= 1 || pendingItems.length === 0}>{pendingItems.length === 0 ? 'Sorteio esgotado' : drawnItems.length >= 1 ? 'Feche para sortear novamente' : 'Sortear resultado'}</button></div>
+        <div className="item-draw-actions"><button className="primary-draw-button" onClick={drawnItems.length >= 1 ? closeDraw : drawItem} disabled={drawnItems.length === 0 && pendingItems.length === 0}>{drawnItems.length >= 1 ? 'Fechar modal' : 'Sortear resultado'}</button></div>
       </section>
     </div>}
   </main>

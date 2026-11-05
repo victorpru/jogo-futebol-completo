@@ -10,6 +10,8 @@ export interface WinnerRecord {
 
 interface WinnersPageProps {
   onNavigate: (page: HeaderPage) => void
+  money: number
+  teamPower: number
   winners: WinnerRecord[]
   isAdmin: boolean
   onAddWinner: (name: string) => Promise<string | null>
@@ -17,9 +19,9 @@ interface WinnersPageProps {
   onRemoveWinner: (id: string) => Promise<void>
 }
 
-export function WinnersPage({ onNavigate, winners, isAdmin, onAddWinner, onAddWin, onRemoveWinner }: WinnersPageProps) {
+export function WinnersPage({ onNavigate, money, teamPower, winners, isAdmin, onAddWinner, onAddWin, onRemoveWinner }: WinnersPageProps) {
   return <main className="winners-page">
-    <AppHeader activePage="winners" onNavigate={onNavigate} />
+    <AppHeader activePage="winners" onNavigate={onNavigate} money={money} teamPower={teamPower} />
     <section className="winners-hero">
       <span className="eyebrow">FOOTBALL DECK BUILDING · HISTÓRICO</span>
       <h1>Quem já venceu<br /><em>o jogo.</em></h1>

@@ -44,7 +44,7 @@ export async function deleteSponsorDraw(supabase: SupabaseClient, draw: SponsorD
 export async function fetchItemDrawState(supabase: SupabaseClient, userId: string): Promise<ItemDrawState | null> {
   const { data, error } = await supabase
     .from('item_draw_state')
-    .select('level_up_total, level_up_remaining, blue_remaining, yellow_remaining')
+    .select('level_up_total, level_up_remaining, blue_remaining, yellow_remaining, sponsorship_money_claimed')
     .eq('user_id', userId)
     .maybeSingle()
   if (error) throw error
@@ -54,6 +54,7 @@ export async function fetchItemDrawState(supabase: SupabaseClient, userId: strin
     levelUpRemaining: Array.isArray(data.level_up_remaining) ? data.level_up_remaining : [],
     blueRemaining: Array.isArray(data.blue_remaining) ? data.blue_remaining : [],
     yellowRemaining: Array.isArray(data.yellow_remaining) ? data.yellow_remaining : [],
+    sponsorshipMoneyClaimed: Number.isFinite(Number(data.sponsorship_money_claimed)) ? Number(data.sponsorship_money_claimed) : 0,
   }
 }
 
@@ -64,6 +65,7 @@ export async function saveItemDrawState(supabase: SupabaseClient, userId: string
     level_up_remaining: state.levelUpRemaining,
     blue_remaining: state.blueRemaining,
     yellow_remaining: state.yellowRemaining,
+    sponsorship_money_claimed: state.sponsorshipMoneyClaimed,
     updated_at: new Date().toISOString(),
   })
   if (error) throw error

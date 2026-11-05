@@ -6,8 +6,14 @@ import type { HeaderPage } from './AppHeader'
 interface HomePageProps {
   onNavigate: (page: HeaderPage) => void
   money: number
+  teamPower: number
   ownedPlayers: TeamPlayer[]
-  onUpdateMoney: (amount: number) => void
+  hasClaimedBudgetBonus: boolean
+  isBudgetBonusActive: boolean
+  onClaimBudgetBonus: () => void
+  onRemoveBudgetBonus: () => void
+  onResetBudget: () => void
+  onRemoveAllPlayers: () => void
   onRemovePlayer: (playerId: string) => void
   onAddPlayer: (skill: number, value: number, position: PlayerPosition) => string | null
 }
@@ -23,11 +29,11 @@ const positionNames: Record<PlayerPosition, string> = {
 }
 const positionVacancies = { GOL: 1, ZAG: 2, LAT: 2, VOL: 1, MEI: 2, ATA: 3 }
 
-export function HomePage({ onNavigate, money, ownedPlayers, onUpdateMoney, onRemovePlayer, onAddPlayer }: HomePageProps) {
+export function HomePage({ onNavigate, money, teamPower, ownedPlayers, hasClaimedBudgetBonus, isBudgetBonusActive, onClaimBudgetBonus, onRemoveBudgetBonus, onResetBudget, onRemoveAllPlayers, onRemovePlayer, onAddPlayer }: HomePageProps) {
   const totalTeamValue = ownedPlayers.reduce((total, player) => total + player.value, 0)
   const totalTeamPower = ownedPlayers.reduce((total, player) => total + player.skill, 0)
   return <main className="home-page">
-    <AppHeader activePage="home" onNavigate={onNavigate} />
+    <AppHeader activePage="home" onNavigate={onNavigate} money={money} teamPower={teamPower} />
     <section className="home-hero">
       <span className="eyebrow">FOOTBALL DECK BUILDING · TEMPORADA 01</span>
       <h1>Seu espaço para<br /><em>construir o jogo.</em></h1>
@@ -37,11 +43,12 @@ export function HomePage({ onNavigate, money, ownedPlayers, onUpdateMoney, onRem
       <article className="wallet-panel">
         <div className="wallet-heading"><div><span className="eyebrow">ORÇAMENTO DISPONÍVEL</span><h2>Caixa do time</h2></div><span className="wallet-icon">€</span></div>
         <strong className="wallet-balance">€ {money} mi</strong>
-        <MoneyControls onUpdateMoney={onUpdateMoney} />
+        <p className="wallet-description">Você começa com € 300 milhões. O valor dos jogadores é descontado automaticamente do caixa.</p>
+        <div className="budget-actions"><button className="budget-bonus-button" onClick={onClaimBudgetBonus} disabled={hasClaimedBudgetBonus}>{hasClaimedBudgetBonus ? 'Bônus de € 100 mi já utilizado' : 'Adicionar bônus de € 100 mi'}</button>{isBudgetBonusActive && <button className="budget-remove-button" onClick={onRemoveBudgetBonus}>Desfazer bônus</button>}<button className="budget-reset-button" onClick={onResetBudget}>Voltar ao caixa inicial</button></div>
       </article>
       <article className="squad-panel">
         <div className="squad-heading"><div><span className="eyebrow">MEU ELENCO</span><h2>Jogadores que você tem <span>{ownedPlayers.length}/11</span><span className="team-power">PODER TOTAL <strong>{totalTeamPower}</strong></span></h2></div><div className="team-value"><small>VALOR TOTAL DO TIME</small><strong>€ {totalTeamValue} mi</strong></div></div>
-        <PlayerForm onAddPlayer={onAddPlayer} disabled={ownedPlayers.length >= 11} occupied={ownedPlayers.reduce<Record<PlayerPosition, number>>((counts, player) => ({ ...counts, [player.assignedPosition]: counts[player.assignedPosition] + 1 }), { GOL: 0, ZAG: 0, LAT: 0, VOL: 0, MEI: 0, ATA: 0 })} />
+        <div className="squad-tools"><PlayerForm onAddPlayer={onAddPlayer} disabled={ownedPlayers.length >= 11} occupied={ownedPlayers.reduce<Record<PlayerPosition, number>>((counts, player) => ({ ...counts, [player.assignedPosition]: counts[player.assignedPosition] + 1 }), { GOL: 0, ZAG: 0, LAT: 0, VOL: 0, MEI: 0, ATA: 0 })} /><button className="remove-all-button" onClick={onRemoveAllPlayers} disabled={ownedPlayers.length === 0}>Retirar todos os jogadores</button></div>
         <div className="positions-grid">{positions.map((position) => {
           const positionPlayers = ownedPlayers.filter((player) => player.assignedPosition === position)
           return <section className="position-group" key={position}>
@@ -90,16 +97,4 @@ function PlayerForm({ onAddPlayer, disabled, occupied }: { onAddPlayer: HomePage
     </div>
     {error && <p className="form-error">{error}</p>}
   </div>
-}
-
-function MoneyControls({ onUpdateMoney }: { onUpdateMoney: (amount: number) => void }) {
-  const [amount, setAmount] = useState('')
-  const parsedAmount = Number(amount)
-  const apply = (multiplier: number) => {
-    if (Number.isFinite(parsedAmount) && parsedAmount > 0) {
-      onUpdateMoney(parsedAmount * multiplier)
-      setAmount('')
-    }
-  }
-  return <div className="money-controls"><label htmlFor="money-amount">Valor da movimentação (em milhões)</label><div><input id="money-amount" type="number" min="1" step="1" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="Ex.: 25" /><button onClick={() => apply(1)} disabled={!amount}>Adicionar</button><button className="money-remove" onClick={() => apply(-1)} disabled={!amount}>Remover</button></div></div>
 }

@@ -3,6 +3,8 @@ import type { HeaderPage } from './AppHeader'
 
 interface RulesPageProps {
   onNavigate: (page: HeaderPage) => void
+  money: number
+  teamPower: number
 }
 
 const rules = [
@@ -25,9 +27,9 @@ const rules = [
   { title: 'Regra extra: pular a vez', text: 'Ao pular a sua vez, você pode dar upgrade no jogador de sua escolha por 50 milhões.' },
 ]
 
-export function RulesPage({ onNavigate }: RulesPageProps) {
+export function RulesPage({ onNavigate, money, teamPower }: RulesPageProps) {
   return <main className="rules-page">
-    <AppHeader activePage="rules" onNavigate={onNavigate} />
+    <AppHeader activePage="rules" onNavigate={onNavigate} money={money} teamPower={teamPower} />
     <section className="rules-hero">
       <span className="eyebrow">FOOTBALL DECK BUILDING · REGRAS</span>
       <h1>Entenda como<br /><em>o jogo funciona.</em></h1>

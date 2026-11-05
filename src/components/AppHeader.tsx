@@ -7,9 +7,11 @@ export type HeaderPage = 'home' | 'npc' | 'items' | 'winners' | 'rules'
 interface AppHeaderProps {
   activePage: HeaderPage
   onNavigate: (page: HeaderPage) => void
+  money: number
+  teamPower: number
 }
 
-export function AppHeader({ activePage, onNavigate }: AppHeaderProps) {
+export function AppHeader({ activePage, onNavigate, money, teamPower }: AppHeaderProps) {
   const [user, setUser] = useState<User | null>(null)
   const [authOpen, setAuthOpen] = useState(false)
   const [mode, setMode] = useState<'login' | 'signup'>('login')
@@ -64,6 +66,7 @@ export function AppHeader({ activePage, onNavigate }: AppHeaderProps) {
       <button className={activePage === 'winners' ? 'nav-active' : ''} onClick={() => onNavigate('winners')}>Vencedores</button>
       <button className={activePage === 'rules' ? 'nav-active' : ''} onClick={() => onNavigate('rules')}>Regras</button>
     </nav>
+    <div className="team-summary" aria-label="Resumo do time"><span>CAIXA<strong>€ {money} mi</strong></span><span>PODER TOTAL<strong>{teamPower}</strong></span></div>
     <div className="auth-area">
       {user ? <><span className="auth-email">{user.email}</span><button className="auth-button" onClick={signOut}>Sair</button></> : <button className="auth-button" onClick={() => setAuthOpen(true)}>Entrar</button>}
     </div>
