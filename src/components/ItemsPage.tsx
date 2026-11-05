@@ -153,7 +153,7 @@ export function ItemsPage({ onNavigate, userId, money, teamPower, onPrizeMoney, 
     setDrawnItems((items) => [...items, item])
     setPendingItems((items) => items.filter((_, index) => index !== itemIndex))
     setCurrentItem(item)
-    if (drawType === 'prizes' && item.label === 'Prêmio') onPrizeMoney(item.value)
+    if ((drawType === 'prizes' && item.label === 'Prêmio') || (drawType === 'investment' && item.value > 0)) onPrizeMoney(item.value)
     if (drawState && (drawType === 'blue' || drawType === 'yellow' || (drawType === 'prizes' && item.label === 'LEVEL-UP'))) {
       if (drawType === 'prizes' && item.label === 'LEVEL-UP') {
         const levelUpIndex = pendingItems
