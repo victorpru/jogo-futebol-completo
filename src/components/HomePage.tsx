@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { PlayerPosition, TeamPlayer } from '../types/game'
 import { AppHeader } from './AppHeader'
 import type { HeaderPage } from './AppHeader'
+import { supabase } from '../lib/supabase'
+import { fetchSponsorDraws } from '../services/itemDrawApi'
 
 interface HomePageProps {
   onNavigate: (page: HeaderPage) => void
@@ -16,6 +18,8 @@ interface HomePageProps {
   onRemoveAllPlayers: () => void
   onRemovePlayer: (playerId: string) => void
   onAddPlayer: (skill: number, value: number, position: PlayerPosition) => string | null
+  userId: string | null
+  onAddPrizeMoney: (amount: number) => void
 }
 
 const positions: PlayerPosition[] = ['GOL', 'ZAG', 'LAT', 'VOL', 'MEI', 'ATA']
@@ -29,9 +33,19 @@ const positionNames: Record<PlayerPosition, string> = {
 }
 const positionVacancies = { GOL: 1, ZAG: 2, LAT: 2, VOL: 1, MEI: 2, ATA: 3 }
 
-export function HomePage({ onNavigate, money, teamPower, ownedPlayers, hasClaimedBudgetBonus, isBudgetBonusActive, onClaimBudgetBonus, onRemoveBudgetBonus, onResetBudget, onRemoveAllPlayers, onRemovePlayer, onAddPlayer }: HomePageProps) {
+export function HomePage({ onNavigate, money, teamPower, ownedPlayers, hasClaimedBudgetBonus, isBudgetBonusActive, onClaimBudgetBonus, onRemoveBudgetBonus, onResetBudget, onRemoveAllPlayers, onRemovePlayer, onAddPlayer, userId, onAddPrizeMoney }: HomePageProps) {
+  const [sponsorshipTotal, setSponsorshipTotal] = useState(0)
   const totalTeamValue = ownedPlayers.reduce((total, player) => total + player.value, 0)
   const totalTeamPower = ownedPlayers.reduce((total, player) => total + player.skill, 0)
+  useEffect(() => {
+    if (!userId) {
+      setSponsorshipTotal(0)
+      return
+    }
+    fetchSponsorDraws(supabase)
+      .then((draws) => setSponsorshipTotal(draws.filter((draw) => draw.userId === userId).reduce((total, draw) => total + draw.value, 0)))
+      .catch(() => setSponsorshipTotal(0))
+  }, [userId])
   return <main className="home-page">
     <AppHeader activePage="home" onNavigate={onNavigate} money={money} teamPower={teamPower} />
     <section className="home-hero">
@@ -44,7 +58,7 @@ export function HomePage({ onNavigate, money, teamPower, ownedPlayers, hasClaime
         <div className="wallet-heading"><div><span className="eyebrow">ORÇAMENTO DISPONÍVEL</span><h2>Caixa do time</h2></div><span className="wallet-icon">€</span></div>
         <strong className="wallet-balance">€ {money} mi</strong>
         <p className="wallet-description">Você começa com € 300 milhões. O valor dos jogadores é descontado automaticamente do caixa.</p>
-        <div className="budget-actions"><button className="budget-bonus-button" onClick={onClaimBudgetBonus} disabled={hasClaimedBudgetBonus}>{hasClaimedBudgetBonus ? 'Bônus de € 100 mi já utilizado' : 'Adicionar bônus de € 100 mi'}</button>{isBudgetBonusActive && <button className="budget-remove-button" onClick={onRemoveBudgetBonus}>Desfazer bônus</button>}<button className="budget-reset-button" onClick={onResetBudget}>Voltar ao caixa inicial</button></div>
+        <div className="budget-actions"><button className="budget-bonus-button" onClick={onClaimBudgetBonus} disabled={hasClaimedBudgetBonus}>{hasClaimedBudgetBonus ? 'Bônus de € 100 mi já utilizado' : 'Adicionar bônus de € 100 mi'}</button><button className="budget-bonus-button" onClick={() => onAddPrizeMoney(sponsorshipTotal)} disabled={!userId || sponsorshipTotal <= 0}>Adicionar patrocínio · € {sponsorshipTotal} mi</button>{isBudgetBonusActive && <button className="budget-remove-button" onClick={onRemoveBudgetBonus}>Desfazer bônus</button>}<button className="budget-reset-button" onClick={onResetBudget}>Voltar ao caixa inicial</button></div>
       </article>
       <article className="squad-panel">
         <div className="squad-heading"><div><span className="eyebrow">MEU ELENCO</span><h2>Jogadores que você tem <span>{ownedPlayers.length}/11</span><span className="team-power">PODER TOTAL <strong>{totalTeamPower}</strong></span></h2></div><div className="team-value"><small>VALOR TOTAL DO TIME</small><strong>€ {totalTeamValue} mi</strong></div></div>

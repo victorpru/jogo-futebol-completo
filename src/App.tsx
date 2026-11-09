@@ -178,10 +178,10 @@ export default function App() {
     try { setWinners(await deleteWinner(supabase, winnerId)) } catch { setError('Não foi possível remover o vencedor.') }
   }
 
-  if (page === 'home') return <HomePage onNavigate={navigateTo} money={money} teamPower={teamPower} ownedPlayers={ownedPlayers} hasClaimedBudgetBonus={hasClaimedBudgetBonus} isBudgetBonusActive={isBudgetBonusActive} onClaimBudgetBonus={claimBudgetBonus} onRemoveBudgetBonus={removeBudgetBonus} onResetBudget={resetBudget} onRemoveAllPlayers={removeAllPlayers} onRemovePlayer={removePlayer} onAddPlayer={addPlayer} />
+  if (page === 'home') return <HomePage onNavigate={navigateTo} userId={userId} onAddPrizeMoney={addPrizeMoney} money={money} teamPower={teamPower} ownedPlayers={ownedPlayers} hasClaimedBudgetBonus={hasClaimedBudgetBonus} isBudgetBonusActive={isBudgetBonusActive} onClaimBudgetBonus={claimBudgetBonus} onRemoveBudgetBonus={removeBudgetBonus} onResetBudget={resetBudget} onRemoveAllPlayers={removeAllPlayers} onRemovePlayer={removePlayer} onAddPlayer={addPlayer} />
   if (page === 'npc') return <NpcDrawPage onNavigate={navigateTo} userId={userId} money={money} teamPower={teamPower} onPrizeMoney={addPrizeMoney} />
   if (page === 'items') return <ItemsPage onNavigate={navigateTo} userId={userId} money={money} teamPower={teamPower} onPrizeMoney={addPrizeMoney} />
   if (page === 'winners') return <WinnersPage onNavigate={navigateTo} money={money} teamPower={teamPower} winners={winners} isAdmin={isAdmin} onAddWinner={addWinner} onAddWin={addWin} onRemoveWinner={removeWinner} />
   if (page === 'rules') return <RulesPage onNavigate={navigateTo} money={money} teamPower={teamPower} />
-  return <HomePage onNavigate={navigateTo} money={money} teamPower={teamPower} ownedPlayers={ownedPlayers} hasClaimedBudgetBonus={hasClaimedBudgetBonus} isBudgetBonusActive={isBudgetBonusActive} onClaimBudgetBonus={claimBudgetBonus} onRemoveBudgetBonus={removeBudgetBonus} onResetBudget={resetBudget} onRemoveAllPlayers={removeAllPlayers} onRemovePlayer={removePlayer} onAddPlayer={addPlayer} />
+  return <HomePage onNavigate={navigateTo} userId={userId} onAddPrizeMoney={addPrizeMoney} money={money} teamPower={teamPower} ownedPlayers={ownedPlayers} hasClaimedBudgetBonus={hasClaimedBudgetBonus} isBudgetBonusActive={isBudgetBonusActive} onClaimBudgetBonus={claimBudgetBonus} onRemoveBudgetBonus={removeBudgetBonus} onResetBudget={resetBudget} onRemoveAllPlayers={removeAllPlayers} onRemovePlayer={removePlayer} onAddPlayer={addPlayer} />
 }
