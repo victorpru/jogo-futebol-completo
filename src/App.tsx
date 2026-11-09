@@ -15,7 +15,7 @@ import './App.css'
 export default function App() {
   const [page, setPage] = useState<'home' | 'npc' | 'items' | 'winners' | 'rules'>(() => {
     if (window.location.hash === '#sorteio-npc') return 'npc'
-    if (window.location.hash === '#itens') return 'items'
+    if (window.location.hash === '#itens' || window.location.hash === '#itens-level-up') return 'items'
     if (window.location.hash === '#vencedores') return 'winners'
     if (window.location.hash === '#regras') return 'rules'
     return 'home'
@@ -26,6 +26,7 @@ export default function App() {
   const [levelUpCount, setLevelUpCount] = useState(0)
   const [hasClaimedBudgetBonus, setHasClaimedBudgetBonus] = useState(false)
   const [isBudgetBonusActive, setIsBudgetBonusActive] = useState(false)
+  const [requestedItemDraw, setRequestedItemDraw] = useState<'investment' | 'prizes' | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const [winners, setWinners] = useState<WinnerRecord[]>([])
   const [isAdmin, setIsAdmin] = useState(false)
@@ -74,6 +75,7 @@ export default function App() {
 
   const navigateTo = (nextPage: 'home' | 'npc' | 'items' | 'winners' | 'rules') => {
     setPage(nextPage)
+    if (nextPage !== 'items') setRequestedItemDraw(null)
     const hash = nextPage === 'npc' ? '#sorteio-npc' : nextPage === 'items' ? '#itens' : nextPage === 'winners' ? '#vencedores' : nextPage === 'rules' ? '#regras' : '#home'
     window.history.replaceState(null, '', hash)
   }
@@ -163,6 +165,14 @@ export default function App() {
       .catch(() => setError('Não foi possível adicionar o prêmio ao caixa.'))
   }
 
+  const openItemDraw = (type: 'investment' | 'prizes') => {
+    setRequestedItemDraw(type)
+  }
+
+  const openLevelUpSetup = () => {
+    window.open(`${window.location.origin}${window.location.pathname}#itens-level-up`, '_blank', 'noopener,noreferrer')
+  }
+
   const addWinner = async (name: string) => {
     const normalizedName = name.trim()
     if (!normalizedName) return 'Informe o nome do vencedor.'
@@ -178,10 +188,10 @@ export default function App() {
     try { setWinners(await deleteWinner(supabase, winnerId)) } catch { setError('Não foi possível remover o vencedor.') }
   }
 
-  if (page === 'home') return <HomePage onNavigate={navigateTo} userId={userId} onAddPrizeMoney={addPrizeMoney} money={money} teamPower={teamPower} ownedPlayers={ownedPlayers} hasClaimedBudgetBonus={hasClaimedBudgetBonus} isBudgetBonusActive={isBudgetBonusActive} onClaimBudgetBonus={claimBudgetBonus} onRemoveBudgetBonus={removeBudgetBonus} onResetBudget={resetBudget} onRemoveAllPlayers={removeAllPlayers} onRemovePlayer={removePlayer} onAddPlayer={addPlayer} />
+  if (page === 'home') return <><HomePage onNavigate={navigateTo} userId={userId} onAddPrizeMoney={addPrizeMoney} onOpenItemDraw={openItemDraw} money={money} teamPower={teamPower} ownedPlayers={ownedPlayers} hasClaimedBudgetBonus={hasClaimedBudgetBonus} isBudgetBonusActive={isBudgetBonusActive} onClaimBudgetBonus={claimBudgetBonus} onRemoveBudgetBonus={removeBudgetBonus} onResetBudget={resetBudget} onRemoveAllPlayers={removeAllPlayers} onRemovePlayer={removePlayer} onAddPlayer={addPlayer} /><ItemsPage onNavigate={navigateTo} userId={userId} money={money} teamPower={teamPower} onPrizeMoney={addPrizeMoney} openItemDraw={requestedItemDraw} onItemDrawOpened={() => setRequestedItemDraw(null)} onItemDrawNeedsSetup={openLevelUpSetup} modalOnly /></>
   if (page === 'npc') return <NpcDrawPage onNavigate={navigateTo} userId={userId} money={money} teamPower={teamPower} onPrizeMoney={addPrizeMoney} />
-  if (page === 'items') return <ItemsPage onNavigate={navigateTo} userId={userId} money={money} teamPower={teamPower} onPrizeMoney={addPrizeMoney} />
+  if (page === 'items') return <ItemsPage onNavigate={navigateTo} userId={userId} money={money} teamPower={teamPower} onPrizeMoney={addPrizeMoney} openItemDraw={requestedItemDraw} onItemDrawOpened={() => setRequestedItemDraw(null)} initialTab={window.location.hash === '#itens-level-up' ? 'level-up' : 'draws'} />
   if (page === 'winners') return <WinnersPage onNavigate={navigateTo} money={money} teamPower={teamPower} winners={winners} isAdmin={isAdmin} onAddWinner={addWinner} onAddWin={addWin} onRemoveWinner={removeWinner} />
   if (page === 'rules') return <RulesPage onNavigate={navigateTo} money={money} teamPower={teamPower} />
-  return <HomePage onNavigate={navigateTo} userId={userId} onAddPrizeMoney={addPrizeMoney} money={money} teamPower={teamPower} ownedPlayers={ownedPlayers} hasClaimedBudgetBonus={hasClaimedBudgetBonus} isBudgetBonusActive={isBudgetBonusActive} onClaimBudgetBonus={claimBudgetBonus} onRemoveBudgetBonus={removeBudgetBonus} onResetBudget={resetBudget} onRemoveAllPlayers={removeAllPlayers} onRemovePlayer={removePlayer} onAddPlayer={addPlayer} />
+  return <HomePage onNavigate={navigateTo} userId={userId} onAddPrizeMoney={addPrizeMoney} onOpenItemDraw={openItemDraw} money={money} teamPower={teamPower} ownedPlayers={ownedPlayers} hasClaimedBudgetBonus={hasClaimedBudgetBonus} isBudgetBonusActive={isBudgetBonusActive} onClaimBudgetBonus={claimBudgetBonus} onRemoveBudgetBonus={removeBudgetBonus} onResetBudget={resetBudget} onRemoveAllPlayers={removeAllPlayers} onRemovePlayer={removePlayer} onAddPlayer={addPlayer} />
 }

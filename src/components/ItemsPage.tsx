@@ -10,12 +10,18 @@ interface ItemsPageProps {
   money: number
   teamPower: number
   onPrizeMoney: (amount: number) => void
+  openItemDraw?: 'investment' | 'prizes' | null
+  onItemDrawOpened?: () => void
+  onItemDrawNeedsSetup?: () => void
+  modalOnly?: boolean
+  initialTab?: ItemsTab
   openPrizeDraw?: boolean
   onPrizeDrawOpened?: () => void
 }
 
 export type DrawType = 'yellow' | 'blue' | 'investment' | 'prizes' | 'level-up'
 type DrawItem = { label: string; value: number; sponsorIndex?: number }
+type ItemsTab = 'draws' | 'level-up'
 export interface ItemDrawState {
   levelUpTotal: number
   levelUpRemaining: number[]
@@ -60,7 +66,7 @@ function prepareDrawItems(type: DrawType): DrawItem[] {
   return items
 }
 
-export function ItemsPage({ onNavigate, userId, money, teamPower, onPrizeMoney, openPrizeDraw = false, onPrizeDrawOpened }: ItemsPageProps) {
+export function ItemsPage({ onNavigate, userId, money, teamPower, onPrizeMoney, openPrizeDraw = false, onPrizeDrawOpened, openItemDraw = null, onItemDrawOpened, onItemDrawNeedsSetup, modalOnly = false, initialTab = 'draws' }: ItemsPageProps) {
   const [drawType, setDrawType] = useState<DrawType | null>(null)
   const [drawnItems, setDrawnItems] = useState<DrawItem[]>([])
   const [pendingItems, setPendingItems] = useState<DrawItem[]>([])
@@ -70,6 +76,7 @@ export function ItemsPage({ onNavigate, userId, money, teamPower, onPrizeMoney, 
   const [error, setError] = useState<string | null>(null)
   const [sponsorDraws, setSponsorDraws] = useState<SponsorDraw[]>([])
   const [replacement, setReplacement] = useState<{ current: SponsorDraw; candidate: SponsorDraw } | null>(null)
+  const [activeTab, setActiveTab] = useState<ItemsTab>(initialTab)
 
   useEffect(() => {
     if (!userId) return
@@ -109,6 +116,37 @@ export function ItemsPage({ onNavigate, userId, money, teamPower, onPrizeMoney, 
     openDraw('prizes')
     onPrizeDrawOpened?.()
   }, [openPrizeDraw, drawState, isLoading])
+
+  useEffect(() => {
+    if (!openItemDraw || !drawState || isLoading) return
+    let active = true
+    const prepareRequestedDraw = async () => {
+      let currentState = drawState
+      if (userId) {
+        try {
+          currentState = await fetchItemDrawState(supabase, userId) ?? drawState
+          if (active) setDrawState(currentState)
+        } catch {
+          if (active) setError('Não foi possível verificar o cadastro de LEVEL-UP.')
+          return
+        }
+      }
+      if (!active) return
+      if (openItemDraw === 'prizes' && currentState.levelUpTotal === 0) {
+        setActiveTab('level-up')
+        onItemDrawOpened?.()
+        onItemDrawNeedsSetup?.()
+        return
+      }
+      setActiveTab('draws')
+      openDraw(openItemDraw)
+      onItemDrawOpened?.()
+    }
+    void prepareRequestedDraw()
+    return () => {
+      active = false
+    }
+  }, [openItemDraw, drawState, isLoading, userId])
 
   const clearDraw = () => {
     if (!drawState) return
@@ -222,12 +260,17 @@ export function ItemsPage({ onNavigate, userId, money, teamPower, onPrizeMoney, 
     setReplacement(null)
   }
 
-  return <main className="items-page">
+  return <main className={modalOnly ? 'items-page items-page-modal-only' : 'items-page'}>
     <AppHeader activePage="items" onNavigate={onNavigate} money={money} teamPower={teamPower} />
     <section className="items-heading">
       <div><h2>Categorias de itens</h2><p>Sorteios únicos · Resultados revelados um por vez</p></div>
       <span className="items-status"><i /> EM CONFIGURAÇÃO</span>
     </section>
+    <div className="items-tabs" role="tablist" aria-label="Seções de itens">
+      <button className={activeTab === 'draws' ? 'items-tab-active' : ''} onClick={() => setActiveTab('draws')} role="tab" aria-selected={activeTab === 'draws'} type="button">Sorteios</button>
+      <button className={activeTab === 'level-up' ? 'items-tab-active' : ''} onClick={() => setActiveTab('level-up')} role="tab" aria-selected={activeTab === 'level-up'} type="button">Cadastrar LEVEL-UP</button>
+    </div>
+    {activeTab === 'draws' && <>
     <section className="items-grid">
       {itemCategories.map((category) => <article className={`item-category item-${category.accent}`} key={category.key}>
         <div className="item-category-icon" aria-hidden="true">◆</div>
@@ -250,6 +293,17 @@ export function ItemsPage({ onNavigate, userId, money, teamPower, onPrizeMoney, 
     {!userId && <p className="auth-message">Entre na sua conta para usar e salvar os sorteios.</p>}
     {error && <p className="form-error">{error}</p>}
     <footer>Os sorteios azul, amarelo e LEVEL-UP ficam salvos por usuário.</footer>
+    </>}
+    {activeTab === 'level-up' && <section className="level-up-setup-panel">
+      <span className="eyebrow">CONFIGURAÇÃO DE PRÊMIOS</span>
+      <h2>Cadastrar LEVEL-UP</h2>
+      <p>Defina quantos LEVEL-UP estarão disponíveis no sorteio de prêmios.</p>
+      <label htmlFor="level-up-tab-count">Quantidade de LEVEL-UP</label>
+      <select id="level-up-tab-count" value={drawState?.levelUpTotal ?? 0} onChange={(event) => updateLevelUpCount(Number(event.target.value))} disabled={!userId || isLoading || (drawState?.levelUpTotal ?? 0) > 0}>
+        {Array.from({ length: 26 }, (_, index) => <option key={index} value={index}>{index}</option>)}
+      </select>
+      {(drawState?.levelUpTotal ?? 0) > 0 && <p className="level-up-registered">{drawState?.levelUpTotal} LEVEL-UP cadastrado(s).</p>}
+    </section>}
     {drawType && <div className="item-modal-backdrop" role="presentation">
       <section className="item-modal" role="dialog" aria-modal="true" aria-labelledby="item-draw-title">
         <button className="item-modal-close" onClick={closeDraw} aria-label="Fechar sorteio">×</button>
